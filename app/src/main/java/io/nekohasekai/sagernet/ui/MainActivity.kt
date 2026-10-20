@@ -459,6 +459,8 @@ class MainActivity : ThemedActivity(),
     }
 
     override fun onKeyDown(keyCode: Int, event: KeyEvent): Boolean {
+        Log.d("NekoBoxFocus", "onKeyDown key=$keyCode focus=" +
+                "${currentFocus()?.javaClass?.simpleName}/${currentFocus()?.id}")
         focusedBeforeKey = currentFocus()
 
         // move the focus in and out of the profile list, the framework focus search
@@ -541,9 +543,11 @@ class MainActivity : ThemedActivity(),
     }
 
     private fun currentFocus(): View? {
-        // View.findFocus() only returns the direct child of the decor view that holds
-        // the focus, walk down to the view that really has it
-        var current = window?.decorView?.findFocus()
+        // View.findFocus() does not always return the view that has the focus, walk
+        // down from the decor view instead
+        val decor = window?.decorView ?: return null
+        if (!decor.hasFocus()) return null
+        var current: View? = decor
         while (current is ViewGroup) {
             var next: View? = null
             for (i in 0 until current.childCount) {
