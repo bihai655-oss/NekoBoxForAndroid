@@ -543,22 +543,15 @@ class MainActivity : ThemedActivity(),
     }
 
     private fun currentFocus(): View? {
-        // View.findFocus() does not always return the view that has the focus, walk
-        // down from the decor view instead
+        // View.hasFocus() only tells whether the view itself has the focus and
+        // View.findFocus() does not always return the focused view, walk down the
+        // chain of the focused children instead
         val decor = window?.decorView ?: return null
-        if (!decor.hasFocus()) return null
         var current: View? = decor
         while (current is ViewGroup) {
-            var next: View? = null
-            for (i in 0 until current.childCount) {
-                val child = current.getChildAt(i)
-                if (child.hasFocus()) {
-                    next = child
-                    break
-                }
-            }
-            current = next
+            current = current.getFocusedChild() ?: break
         }
+        if (current === decor) return null
         return current
     }
 
