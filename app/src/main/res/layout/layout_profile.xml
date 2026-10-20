@@ -14,7 +14,6 @@
         android:id="@+id/content_lin"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:focusable="true"
         android:orientation="horizontal">
 
         <LinearLayout
@@ -67,6 +66,7 @@
                     android:background="?attr/selectableItemBackgroundBorderless"
                     android:contentDescription="@string/edit"
                     android:focusable="true"
+                    android:nextFocusLeft="@+id/content"
                     android:padding="12dp"
                     app:srcCompat="@drawable/ic_image_edit" />
 
@@ -78,7 +78,7 @@
                     android:background="?attr/selectableItemBackgroundBorderless"
                     android:contentDescription="@string/share"
                     android:focusable="true"
-                    android:nextFocusLeft="@+id/container">
+                    android:nextFocusLeft="@+id/content">
 
                     <LinearLayout
                         android:id="@+id/share_layer"
@@ -103,6 +103,7 @@
                     android:background="?attr/selectableItemBackgroundBorderless"
                     android:contentDescription="@string/delete"
                     android:focusable="true"
+                    android:nextFocusLeft="@+id/content"
                     android:padding="12dp"
                     android:visibility="gone"
                     app:srcCompat="@drawable/ic_action_delete" />

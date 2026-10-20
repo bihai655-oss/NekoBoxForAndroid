@@ -4,6 +4,7 @@ import android.graphics.Rect
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import io.nekohasekai.sagernet.database.DataStore
+import io.nekohasekai.sagernet.SagerNet
 import io.nekohasekai.sagernet.ui.MainActivity
 
 class FixedLinearLayoutManager(val recyclerView: RecyclerView) :
@@ -49,7 +50,9 @@ class FixedLinearLayoutManager(val recyclerView: RecyclerView) :
                 return scrollRange
             }
             activity.binding.fab.apply {
-                if (isShown) hide()
+                // On TV the FAB is the only way to start/stop the service,
+                // it must never disappear while scrolling with the remote.
+                if (isShown && !SagerNet.isTv) hide()
             }
         } else {
             /*val screen = Rect().also { activity.window.decorView.getGlobalVisibleRect(it) }

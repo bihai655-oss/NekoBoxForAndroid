@@ -10,12 +10,14 @@ import android.os.Bundle
 import android.os.RemoteException
 import android.view.KeyEvent
 import android.view.MenuItem
+import android.view.View
 import androidx.activity.addCallback
 import androidx.annotation.IdRes
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
 import androidx.preference.PreferenceDataStore
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
+import com.google.android.material.navigation.NavigationMenuView
 import com.google.android.material.navigation.NavigationView
 import com.google.android.material.snackbar.Snackbar
 import io.nekohasekai.sagernet.BuildConfig
@@ -305,7 +307,7 @@ class MainActivity : ThemedActivity(),
     }
 
     override fun onNavigationItemSelected(item: MenuItem): Boolean {
-        if (item.isChecked) binding.drawerLayout.closeDrawers() else {
+        if (item.isChecked) closeNavigationDrawer() else {
             return displayFragmentWithId(item.itemId)
         }
         return true
@@ -325,7 +327,7 @@ class MainActivity : ThemedActivity(),
         supportFragmentManager.beginTransaction()
             .replace(R.id.fragment_holder, fragment)
             .commitAllowingStateLoss()
-        binding.drawerLayout.closeDrawers()
+        closeNavigationDrawer()
     }
 
     fun displayFragmentWithId(@IdRes id: Int): Boolean {
@@ -457,15 +459,26 @@ class MainActivity : ThemedActivity(),
         when (keyCode) {
             KeyEvent.KEYCODE_DPAD_LEFT -> {
                 if (super.onKeyDown(keyCode, event)) return true
-                binding.drawerLayout.open()
-                navigation.requestFocus()
+                // the drawer is already open, let the menu handle the key
+                if (binding.drawerLayout.isOpen) return false
+                openNavigationDrawer()
+                return true
             }
 
             KeyEvent.KEYCODE_DPAD_RIGHT -> {
                 if (binding.drawerLayout.isOpen) {
-                    binding.drawerLayout.close()
+                    closeNavigationDrawer()
                     return true
                 }
+            }
+
+            KeyEvent.KEYCODE_MENU -> {
+                if (binding.drawerLayout.isOpen) {
+                    closeNavigationDrawer()
+                } else {
+                    openNavigationDrawer()
+                }
+                return true
             }
         }
 
@@ -475,6 +488,41 @@ class MainActivity : ThemedActivity(),
         val fragment =
             supportFragmentManager.findFragmentById(R.id.fragment_holder) as? ToolbarFragment
         return fragment != null && fragment.onKeyDown(keyCode, event)
+    }
+
+    private var lastContentFocus: View? = null
+
+    /**
+     * Open the navigation drawer and move the focus into it.
+     *
+     * NavigationView is not focusable by itself, so a plain requestFocus() on it does
+     * nothing and the menu items stay unreachable with a D-pad / TV remote.
+     */
+    fun openNavigationDrawer() {
+        if (!binding.drawerLayout.isOpen) {
+            lastContentFocus = binding.drawerLayout.findFocus()
+            binding.drawerLayout.open()
+        }
+        focusDrawerMenu()
+    }
+
+    fun closeNavigationDrawer() {
+        binding.drawerLayout.close()
+        lastContentFocus?.takeIf { it.hasFocusable() && it.isShown }?.requestFocus()
+    }
+
+    private fun focusDrawerMenu() {
+        val menuView = navigation.getChildAt(0) as? NavigationMenuView ?: return
+        menuView.post {
+            for (i in 0 until menuView.childCount) {
+                val child = menuView.getChildAt(i)
+                if (child.hasFocusable()) {
+                    child.requestFocus()
+                    return@post
+                }
+            }
+            menuView.requestFocus()
+        }
     }
 
 }

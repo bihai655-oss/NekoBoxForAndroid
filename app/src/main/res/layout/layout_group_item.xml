@@ -6,6 +6,8 @@
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
     android:layout_margin="4dp"
+    android:clickable="true"
+    android:focusable="true"
     app:cardElevation="2dp">
 
     <LinearLayout
@@ -64,6 +66,7 @@
                 android:background="?attr/selectableItemBackgroundBorderless"
                 android:contentDescription="@string/edit"
                 android:focusable="true"
+                android:nextFocusLeft="@+id/content"
                 android:padding="12dp"
                 app:srcCompat="@drawable/ic_image_edit" />
 
@@ -73,8 +76,9 @@
                 android:layout_height="wrap_content"
                 android:layout_gravity="top"
                 android:background="?attr/selectableItemBackgroundBorderless"
+                android:contentDescription="@string/edit"
                 android:focusable="true"
-                android:nextFocusLeft="@+id/container"
+                android:nextFocusLeft="@+id/content"
                 android:padding="12dp"
                 app:srcCompat="@drawable/ic_baseline_more_vert_24" />
 
