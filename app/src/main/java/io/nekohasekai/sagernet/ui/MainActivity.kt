@@ -11,13 +11,13 @@ import android.os.RemoteException
 import android.view.KeyEvent
 import android.view.MenuItem
 import android.view.View
+import android.view.ViewGroup
 import androidx.activity.addCallback
 import androidx.annotation.IdRes
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
 import androidx.preference.PreferenceDataStore
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
-import com.google.android.material.navigation.NavigationMenuView
 import com.google.android.material.navigation.NavigationView
 import com.google.android.material.snackbar.Snackbar
 import io.nekohasekai.sagernet.BuildConfig
@@ -512,17 +512,20 @@ class MainActivity : ThemedActivity(),
     }
 
     private fun focusDrawerMenu() {
-        val menuView = navigation.getChildAt(0) as? NavigationMenuView ?: return
+        val menuView = navigation.getChildAt(0) ?: return
         menuView.post {
-            for (i in 0 until menuView.childCount) {
-                val child = menuView.getChildAt(i)
-                if (child.hasFocusable()) {
-                    child.requestFocus()
-                    return@post
-                }
-            }
-            menuView.requestFocus()
+            (menuView.findFirstFocusableChild() ?: menuView).requestFocus()
         }
+    }
+
+    private fun View.findFirstFocusableChild(): View? {
+        if (this !is ViewGroup) return null
+        for (i in 0 until childCount) {
+            val child = getChildAt(i)
+            if (child.hasFocusable()) return child
+            child.findFirstFocusableChild()?.let { return it }
+        }
+        return null
     }
 
 }
