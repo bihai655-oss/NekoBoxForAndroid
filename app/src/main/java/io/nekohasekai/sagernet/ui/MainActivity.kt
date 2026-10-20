@@ -8,6 +8,7 @@ import android.net.Uri
 import android.os.Build
 import android.os.Bundle
 import android.os.RemoteException
+import android.util.Log
 import android.view.KeyEvent
 import android.view.MenuItem
 import android.view.View
@@ -610,6 +611,8 @@ class MainActivity : ThemedActivity(),
         val focused = currentFocus() ?: return false
         val list = profileListView()
         val inList = list != null && isInProfileList(focused)
+        Log.d("NekoBoxFocus", "key=$keyCode focused=${focused.javaClass.simpleName}/" +
+                "${focused.id} list=${list?.id} inList=$inList")
 
         when (keyCode) {
             KeyEvent.KEYCODE_DPAD_UP -> {
@@ -658,11 +661,13 @@ class MainActivity : ThemedActivity(),
     }
 
     private fun focusToolbarAction(): Boolean {
-        val toolbar = currentToolbar() ?: return false
-        val action = toolbar.findViewById<View>(R.id.action_search) ?: return false
+        val toolbar = currentToolbar()
+        val action = toolbar?.findViewById<View>(R.id.action_search)
         // the collapsed search view, the action view itself is not clickable
-        val button = action.findViewById<View>(androidx.appcompat.R.id.search_button) ?: action
-        return button.requestFocus()
+        val button = action?.findViewById<View>(androidx.appcompat.R.id.search_button) ?: action
+        val result = button?.requestFocus() ?: false
+        Log.d("NekoBoxFocus", "toolbar=$toolbar action=$action button=$button focus=$result")
+        return result
     }
 
     private fun focusProfileList(): Boolean {
