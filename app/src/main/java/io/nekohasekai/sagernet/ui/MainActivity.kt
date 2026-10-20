@@ -458,6 +458,8 @@ class MainActivity : ThemedActivity(),
     }
 
     override fun onKeyDown(keyCode: Int, event: KeyEvent): Boolean {
+        focusedBeforeKey = currentFocus()
+
         // move the focus in and out of the profile list, the framework focus search
         // never leaves the RecyclerView
         if (handleRemoteNavigation(keyCode)) return true
@@ -537,7 +539,23 @@ class MainActivity : ThemedActivity(),
         return null
     }
 
-    private fun currentFocus(): View? = window?.decorView?.findFocus()
+    private fun currentFocus(): View? {
+        // View.findFocus() only returns the direct child of the decor view that holds
+        // the focus, walk down to the view that really has it
+        var current = window?.decorView?.findFocus()
+        while (current is ViewGroup) {
+            var next: View? = null
+            for (i in 0 until current.childCount) {
+                val child = current.getChildAt(i)
+                if (child.hasFocus()) {
+                    next = child
+                    break
+                }
+            }
+            current = next
+        }
+        return current
+    }
 
     private fun findAncestorWithId(view: View?, id: Int): View? {
         var current = view
@@ -563,6 +581,24 @@ class MainActivity : ThemedActivity(),
     private fun isInToolbar(view: View?): Boolean =
         findAncestorWithId(view, R.id.toolbar) != null
 
+    private fun isInProfileList(view: View?): Boolean =
+        findAncestorWithId(view, R.id.configuration_list) != null
+
+    private var focusedBeforeKey: View? = null
+
+    override fun onKeyUp(keyCode: Int, event: KeyEvent): Boolean {
+        val before = focusedBeforeKey
+        focusedBeforeKey = null
+        if (keyCode == KeyEvent.KEYCODE_DPAD_DOWN && before != null &&
+                before === currentFocus() && isInProfileList(before)
+        ) {
+            // the focus could not be moved any further down, the service button is
+            // the next thing below the list
+            if (focusServiceButton()) return true
+        }
+        return super.onKeyUp(keyCode, event)
+    }
+
     /**
      * D-pad navigation between the profile list, the toolbar and the service button.
      *
@@ -573,8 +609,7 @@ class MainActivity : ThemedActivity(),
     private fun handleRemoteNavigation(keyCode: Int): Boolean {
         val focused = currentFocus() ?: return false
         val list = profileListView()
-        val inList = list != null &&
-                findAncestorWithId(focused, R.id.configuration_list) != null
+        val inList = list != null && isInProfileList(focused)
 
         when (keyCode) {
             KeyEvent.KEYCODE_DPAD_UP -> {
@@ -593,8 +628,10 @@ class MainActivity : ThemedActivity(),
                 if (inList) {
                     // the last profile, the service button is below it
                     val count = list!!.adapter?.itemCount ?: 0
-                    if (profileListPosition(list!!, focused) != count - 1) return false
-                    return focusServiceButton()
+                    if (profileListPosition(list!!, focused) == count - 1) {
+                        return focusServiceButton()
+                    }
+                    return false
                 }
                 // the toolbar, the list is below it
                 if (isInToolbar(focused)) {
@@ -616,10 +653,10 @@ class MainActivity : ThemedActivity(),
 
     private fun focusToolbarAction(): Boolean {
         val toolbar = currentToolbar() ?: return false
+        val action = toolbar.findViewById<View>(R.id.action_search) ?: return false
         // the collapsed search view, the action view itself is not clickable
-        val action = toolbar.findViewById<View>(androidx.appcompat.R.id.search_button)
-            ?: toolbar.findViewById<View>(R.id.action_search)
-        return action?.requestFocus() ?: false
+        val button = action.findViewById<View>(androidx.appcompat.R.id.search_button) ?: action
+        return button.requestFocus()
     }
 
     private fun focusProfileList(): Boolean {
