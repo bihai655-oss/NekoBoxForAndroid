@@ -5,11 +5,16 @@ on:
       - main
   workflow_dispatch:
 
+permissions:
+  contents: write
+
 env:
   # signing of the generated TV keystore (kept in the Actions cache, not a real secret)
   KEYSTORE_PASS: tv-release
   ALIAS_NAME: tv
   ALIAS_PASS: tv-release
+  # rolling release tag the APKs are published to
+  RELEASE_TAG: tv-latest
 
 jobs:
   libcore:
@@ -94,9 +99,10 @@ jobs:
           echo "APK=$APK" >> $GITHUB_ENV
       - name: Collect armeabi-v7a APK
         run: |
-          mkdir -p armv7a-apk
+          mkdir -p armv7a-apk release-apk
           find app/build/outputs/apk -name '*armeabi-v7a*.apk' -exec cp {} armv7a-apk/ \;
-          ls -l armv7a-apk
+          find app/build/outputs/apk -name '*.apk' -exec cp {} release-apk/ \;
+          ls -l release-apk
       - uses: actions/upload-artifact@v4
         with:
           name: NekoBox-TV-APK-armv7a
@@ -106,3 +112,17 @@ jobs:
         with:
           name: NekoBox-TV-APK
           path: ${{ env.APK }}
+      - name: Publish APKs to GitHub Release
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -e
+          NOTES="Auto build from commit ${GITHUB_SHA::7} ($(date -u '+%Y-%m-%d %H:%M UTC')).
+          Signed with the personal TV keystore, not an official release."
+          if gh release view "$RELEASE_TAG" > /dev/null 2>&1; then
+            gh release upload "$RELEASE_TAG" release-apk/*.apk --clobber
+            gh release edit "$RELEASE_TAG" --title "NekoBox TV APK (auto build)" --notes "$NOTES"
+          else
+            gh release create "$RELEASE_TAG" release-apk/*.apk \
+              --title "NekoBox TV APK (auto build)" --notes "$NOTES" --target "$GITHUB_SHA"
+          fi
