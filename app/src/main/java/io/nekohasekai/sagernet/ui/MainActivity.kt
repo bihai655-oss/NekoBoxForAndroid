@@ -614,8 +614,9 @@ class MainActivity : ThemedActivity(),
         when (keyCode) {
             KeyEvent.KEYCODE_DPAD_UP -> {
                 if (inList) {
-                    // the first profile, the toolbar is above it
-                    if (profileListPosition(list!!, focused) != 0) return false
+                    // the list itself or the first profile, the toolbar is above it
+                    val position = profileListPosition(list!!, focused)
+                    if (position != 0 && position != -1) return false
                     return focusToolbarAction()
                 }
                 // the service button, the list is above it
@@ -626,9 +627,14 @@ class MainActivity : ThemedActivity(),
 
             KeyEvent.KEYCODE_DPAD_DOWN -> {
                 if (inList) {
+                    val position = profileListPosition(list!!, focused)
+                    // the list itself, the first profile is below it
+                    if (position == -1) {
+                        return focusProfileList()
+                    }
                     // the last profile, the service button is below it
                     val count = list!!.adapter?.itemCount ?: 0
-                    if (profileListPosition(list!!, focused) == count - 1) {
+                    if (position == count - 1) {
                         return focusServiceButton()
                     }
                     return false
