@@ -273,9 +273,11 @@ class ConfigurationFragment @JvmOverloads constructor(
     }
 
     override fun onKeyDown(ketCode: Int, event: KeyEvent): Boolean {
-        val fragment = getCurrentGroupFragment()
-        fragment?.configurationListView?.apply {
-            if (!hasFocus()) requestFocus()
+        // Only take the focus when nothing else has it. With a D-pad / TV remote the
+        // focus may have been moved to the toolbar or to the service button, taking it
+        // back would make them unreachable.
+        if (activity?.window?.decorView?.findFocus() == null) {
+            getCurrentGroupFragment()?.configurationListView?.requestFocus()
         }
         return super.onKeyDown(ketCode, event)
     }

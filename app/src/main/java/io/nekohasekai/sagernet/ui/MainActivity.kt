@@ -17,6 +17,8 @@ import androidx.annotation.IdRes
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
 import androidx.preference.PreferenceDataStore
+import androidx.recyclerview.widget.LinearLayoutManager
+import androidx.recyclerview.widget.RecyclerView
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import com.google.android.material.navigation.NavigationView
 import com.google.android.material.snackbar.Snackbar
@@ -456,11 +458,18 @@ class MainActivity : ThemedActivity(),
     }
 
     override fun onKeyDown(keyCode: Int, event: KeyEvent): Boolean {
+        // move the focus in and out of the profile list, the framework focus search
+        // never leaves the RecyclerView
+        if (handleRemoteNavigation(keyCode)) return true
+
         when (keyCode) {
             KeyEvent.KEYCODE_DPAD_LEFT -> {
                 if (super.onKeyDown(keyCode, event)) return true
                 // the drawer is already open, let the menu handle the key
                 if (binding.drawerLayout.isOpen) return false
+                // the focus is on one of the toolbar buttons, let the framework move it
+                // to the button on the left instead of opening the drawer
+                if (isInToolbar(currentFocus())) return false
                 openNavigationDrawer()
                 return true
             }
@@ -526,6 +535,105 @@ class MainActivity : ThemedActivity(),
             child.findFirstFocusableChild()?.let { return it }
         }
         return null
+    }
+
+    private fun currentFocus(): View? = window?.decorView?.findFocus()
+
+    private fun findAncestorWithId(view: View?, id: Int): View? {
+        var current = view
+        while (current != null) {
+            if (current.id == id) return current
+            current = current.parent as? View
+        }
+        return null
+    }
+
+    private fun currentToolbar(): View? {
+        val fragment =
+            supportFragmentManager.findFragmentById(R.id.fragment_holder) as? ToolbarFragment
+        return fragment?.view?.findViewById(R.id.toolbar)
+    }
+
+    private fun profileListView(): RecyclerView? {
+        val fragment =
+            supportFragmentManager.findFragmentById(R.id.fragment_holder) as? ToolbarFragment
+        return fragment?.view?.findViewById(R.id.configuration_list)
+    }
+
+    private fun isInToolbar(view: View?): Boolean =
+        findAncestorWithId(view, R.id.toolbar) != null
+
+    /**
+     * D-pad navigation between the profile list, the toolbar and the service button.
+     *
+     * The profile list is a RecyclerView, the framework focus search never leaves it,
+     * so the toolbar buttons (search / add / more) and the service button at the
+     * bottom of the screen can not be reached with a D-pad or a TV remote.
+     */
+    private fun handleRemoteNavigation(keyCode: Int): Boolean {
+        val focused = currentFocus() ?: return false
+        val list = profileListView()
+        val inList = list != null &&
+                findAncestorWithId(focused, R.id.configuration_list) != null
+
+        when (keyCode) {
+            KeyEvent.KEYCODE_DPAD_UP -> {
+                if (inList) {
+                    // the first profile, the toolbar is above it
+                    if (profileListPosition(list!!, focused) != 0) return false
+                    return focusToolbarAction()
+                }
+                // the service button, the list is above it
+                if (focused.id == R.id.fab) {
+                    return focusProfileList()
+                }
+            }
+
+            KeyEvent.KEYCODE_DPAD_DOWN -> {
+                if (inList) {
+                    // the last profile, the service button is below it
+                    val count = list!!.adapter?.itemCount ?: 0
+                    if (profileListPosition(list!!, focused) != count - 1) return false
+                    return focusServiceButton()
+                }
+                // the toolbar, the list is below it
+                if (isInToolbar(focused)) {
+                    return focusProfileList()
+                }
+            }
+        }
+        return false
+    }
+
+    private fun profileListPosition(list: RecyclerView, focused: View): Int {
+        var current: View? = focused
+        while (current != null && current.parent !== list) {
+            current = current.parent as? View
+        }
+        if (current == null) return -1
+        return list.getChildAdapterPosition(current)
+    }
+
+    private fun focusToolbarAction(): Boolean {
+        val toolbar = currentToolbar() ?: return false
+        // the collapsed search view, the action view itself is not clickable
+        val action = toolbar.findViewById<View>(androidx.appcompat.R.id.search_button)
+            ?: toolbar.findViewById<View>(R.id.action_search)
+        return action?.requestFocus() ?: false
+    }
+
+    private fun focusProfileList(): Boolean {
+        val list = profileListView() ?: return false
+        val manager = list.layoutManager as? LinearLayoutManager
+        val position = manager?.findFirstVisibleItemPosition() ?: 0
+        val item = list.findViewHolderForAdapterPosition(position)?.itemView
+            ?: list.getChildAt(0)
+        return item?.requestFocus() ?: list.requestFocus()
+    }
+
+    private fun focusServiceButton(): Boolean {
+        if (!binding.fab.isShown) return false
+        return binding.fab.requestFocus()
     }
 
 }
